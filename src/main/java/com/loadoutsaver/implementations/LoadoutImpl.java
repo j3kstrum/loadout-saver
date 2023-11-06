@@ -18,27 +18,42 @@ public class LoadoutImpl implements ILoadout {
     }
 
     public LoadoutImpl(String name, Client client) {
-        ItemContainer inventory = client.getItemContainer(InventoryID.INVENTORY);
-        ItemContainer equipment = client.getItemContainer(InventoryID.EQUIPMENT);
+        this(name, ParseInventory(client), ParseEquipment(client));
+    }
 
-        if (inventory == null || equipment == null) {
+    private static IInventory ParseInventory(Client client) {
+        ItemContainer inventory = client.getItemContainer(InventoryID.INVENTORY);
+        if (inventory == null) {
             // Bad client state.
             throw new IllegalArgumentException("Client state was unexpected in loadout parser.");
         }
-
-        this.inventory = new InventoryImpl(inventory);
-        this.equipment = new EquipmentImpl(equipment);
-        this.name = name;
+        return new InventoryImpl(inventory);
     }
 
-    public LoadoutImpl(Client client) {
-        this("Unnamed Loadout", client);
+    private static IEquipment ParseEquipment(Client client) {
+        ItemContainer equipment = client.getItemContainer(InventoryID.EQUIPMENT);
+        if (equipment == null) {
+            // Bad client state.
+            throw new IllegalArgumentException("Client state was unexpected in loadout parser.");
+        }
+        return new EquipmentImpl(equipment);
     }
 
     private LoadoutImpl(String name, IInventory inventory, IEquipment equipment) {
-        if (name.contains("{") || name.contains("}") || name.contains(":") || name.contains(";")) {
+        this(name, inventory, equipment, false);
+    }
+
+    private LoadoutImpl(String name, IInventory inventory, IEquipment equipment, boolean replaceName) {
+        if (name.contains(":")) {
             // Some high-level sanitization. The ":" is the one that will break the (de)-serialization here.
-            throw new IllegalArgumentException("Name contained illegal characters: " + name);
+            if (replaceName) {
+                String replacement = name.replace(":", "[COLON]");
+                System.out.println("WARNING: Replacing name " + name + " with " + replacement);
+                name = replacement;
+            }
+            else {
+                throw new IllegalArgumentException("Name contained illegal characters: " + name);
+            }
         }
         this.name = name;
         this.inventory = inventory;
@@ -54,7 +69,7 @@ public class LoadoutImpl implements ILoadout {
         if (this == Deserializer) {
             throw new IllegalArgumentException("Attempted to access property on deserializer singleton.");
         }
-        return null;
+        return name;
     }
 
     @Override
@@ -62,7 +77,7 @@ public class LoadoutImpl implements ILoadout {
         if (this == Deserializer) {
             throw new IllegalArgumentException("Attempted to access property on deserializer singleton.");
         }
-        return null;
+        return inventory;
     }
 
     @Override
@@ -70,7 +85,7 @@ public class LoadoutImpl implements ILoadout {
         if (this == Deserializer) {
             throw new IllegalArgumentException("Attempted to access property on deserializer singleton.");
         }
-        return null;
+        return equipment;
     }
 
     // Serialization format:
@@ -101,6 +116,6 @@ public class LoadoutImpl implements ILoadout {
         IInventory inventory = InventoryImpl.Deserializer.DeserializeString(decodedInventory);
         IEquipment equipment = EquipmentImpl.Deserializer.DeserializeString(decodedEquipment);
 
-        return new LoadoutImpl(loadoutName, inventory, equipment);
+        return new LoadoutImpl(loadoutName, inventory, equipment, true);
     }
 }
