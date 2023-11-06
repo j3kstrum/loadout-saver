@@ -10,6 +10,7 @@ import net.runelite.api.ItemContainer;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -82,7 +83,8 @@ public class EquipmentImpl implements IEquipment {
 
     @Override
     public IEquipment DeserializeString(String serialized) {
-        String[] items = serialized.split(";");
+
+        List<String> items = Arrays.stream(serialized.split(";")).filter(s -> !s.isBlank()).collect(Collectors.toList());
         Map<EquipmentInventorySlot, IItemStack> itemMap = new HashMap<>();
 
         for (String item : items) {
