@@ -9,10 +9,17 @@ import net.runelite.api.GameState;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.menus.MenuManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
 
+import javax.imageio.ImageIO;
 import javax.inject.Inject;
+import java.awt.image.BufferedImage;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Slf4j
 @PluginDescriptor(
@@ -32,15 +39,37 @@ public class LoadoutSaverPlugin extends Plugin
 	@Inject
 	private ConfigManager configManager;
 
-	private LoadoutManager loadoutManager = new LoadoutManager();
+	@Inject
+	private MenuManager menuManager;
+
+	@Inject
+	private ClientToolbar clientToolbar;
+
+	private LoadoutManager loadoutManager;
+
+	@Inject
+	private LoadoutSaverPanel loadoutSaverPanel;
+
+	private NavigationButton runeliteButton;
 
 	@Override
 	protected void startUp() throws Exception
 	{
+		BufferedImage icon;
+		synchronized (ImageIO.class) {
+			icon = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("icon.png")));
+		}
+		runeliteButton = NavigationButton.builder().tooltip("Loadout Manager").panel(loadoutSaverPanel).icon(icon).build();
+
+		menuManager.addPlayerMenuItem("Loadout Manager");
+		clientToolbar.addNavigation(this.runeliteButton);
+
 		// Load from save file.
 		System.out.println("Load from save file.");
-		loadoutManager = new LoadoutManager(config);
+		loadoutManager = new LoadoutManager(config, configManager);
 		System.out.println("Load complete; loaded " + loadoutManager.size() + " loadouts.");
+
+		loadoutSaverPanel.setManager(loadoutManager);
 	}
 
 	@Override
@@ -50,25 +79,9 @@ public class LoadoutSaverPlugin extends Plugin
 		System.out.println("Saving " + loadoutManager.size() + " loadouts.");
 		loadoutManager.save(configManager);
 		System.out.println("Successfully saved to configuration.");
-	}
 
-	@Subscribe
-	public void onGameStateChanged(GameStateChanged gameStateChanged)
-	{
-		if (gameStateChanged.getGameState() == GameState.LOGGED_IN)
-		{
-			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Autosave was set to " + config.autoSave(), null);
-			if (loadoutManager.size() == 0) {
-				System.out.println("Adding test loadout");
-				try {
-					loadoutManager.AddLoadout(new LoadoutImpl("Test loadout", client), configManager, config);
-					System.out.println("Parsed test loadout.");
-				}
-				catch (IllegalArgumentException e) {
-					System.out.println("Bad client state, probably.");
-				}
-			}
-		}
+		clientToolbar.removeNavigation(this.runeliteButton);
+		menuManager.removePlayerMenuItem("Loadout Manager");
 	}
 
 	@Provides

@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -35,9 +36,25 @@ public class DataIO {
 
     public static List<ILoadout> Parse(String decoded) {
         String[] lines = decoded.split("\n");
-        return Arrays.stream(lines).filter(
+        List<ILoadout> result = Arrays.stream(lines).filter(
                 l -> !l.isBlank()
-        ).map(LoadoutImpl.Deserializer::DeserializeString).collect(Collectors.toList());
+        ).map(
+                raw -> {
+                    try {
+                        return LoadoutImpl.Deserializer.DeserializeString(raw);
+                    } catch (IllegalArgumentException iae) {
+                        System.err.println("Could not parse loadout: " + decoded);
+                        return null;
+                    }
+                }
+        ).filter(Objects::nonNull).collect(Collectors.toList());
+        if (lines.length != result.size()) {
+            // TODO: Can we turn off autosave here, just in case?
+            System.err.println(
+                "WARNING: failed to parse " + (lines.length - result.size()) + " out of " + lines.length + " loadouts."
+            );
+        }
+        return result;
     }
 
     public static String FullSerialize(Collection<ILoadout> loadouts) {

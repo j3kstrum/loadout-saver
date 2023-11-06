@@ -91,7 +91,7 @@ public class EquipmentImpl implements IEquipment {
                 throw new IllegalArgumentException("Corrupted equipment: " + serialized);
             }
             EquipmentInventorySlot key = ID_TO_SLOT.get(Integer.parseInt(kvp[0]));
-            String value = kvp[1];
+            String value = new String(Base64.getDecoder().decode(kvp[1]));
             IItemStack deserializedValue = ItemStackImpl.Deserializer.DeserializeString(value);
             itemMap.put(key, deserializedValue);
         }

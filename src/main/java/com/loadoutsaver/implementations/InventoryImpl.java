@@ -31,6 +31,7 @@ public class InventoryImpl implements IInventory {
 
         // Should be 28 but hey, you never know.
         int inventorySize = inventory.size();
+        // From tests, row is ix // 4, col is ix % 4.
 
         IItemStack[] parsed = new IItemStack[inventorySize];
         for (int i = 0; i < inventorySize; i++) {
@@ -76,9 +77,6 @@ public class InventoryImpl implements IInventory {
 
     @Override
     public IInventory DeserializeString(String serialized) {
-        if (this == Deserializer) {
-            throw new IllegalArgumentException("Attempted to access property on deserializer singleton.");
-        }
         String[] encodedItems = serialized.split(":");
         IItemStack[] items = Arrays.stream(encodedItems).map(
                 Base64.getDecoder()::decode
