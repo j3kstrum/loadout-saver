@@ -17,6 +17,9 @@ public class InventoryImpl implements IInventory {
     }
 
     private InventoryImpl(IItemStack[] items) {
+        if (items.length != 28) {
+            throw new IllegalArgumentException("Expected inventories to have 28 slots.");
+        }
         this.items = items;
     }
 
@@ -25,15 +28,19 @@ public class InventoryImpl implements IInventory {
     }
 
     private static IItemStack[] ParseInventory(ItemContainer inventory) {
+        // I expected this to return 28, but it sometimes returns smaller values (27, or lower).
+        // Rendering fails if that's the case, and this should always be 28 in size anyways.
+        int inventorySize = 28; // inventory.size();
+        IItemStack[] parsed = new IItemStack[inventorySize];
+
         if (inventory == null) {
-            return new IItemStack[0];
+            for (int i = 0; i < inventorySize; i++) {
+                parsed[i] = new ItemStackImpl(-1, 0);
+            }
+            return parsed;
         }
 
-        // Should be 28 but hey, you never know.
-        int inventorySize = inventory.size();
         // From tests, row is ix // 4, col is ix % 4.
-
-        IItemStack[] parsed = new IItemStack[inventorySize];
         for (int i = 0; i < inventorySize; i++) {
             Item item = inventory.getItem(i);
             if (item == null) {
@@ -53,6 +60,9 @@ public class InventoryImpl implements IInventory {
     public IItemStack[] GetItems() {
         if (this == Deserializer) {
             throw new IllegalArgumentException("Attempted to access property on deserializer singleton.");
+        }
+        if (items.length != 28) {
+            System.out.println("inventory has " + items.length + "items");
         }
         return items;
     }

@@ -19,23 +19,21 @@ public class LoadoutImpl implements ILoadout {
 
     public LoadoutImpl(String name, Client client) {
         this(name, ParseInventory(client), ParseEquipment(client));
+        if (
+                client.getItemContainer(InventoryID.INVENTORY) == null
+                && client.getItemContainer(InventoryID.EQUIPMENT) == null
+        ) {
+            throw new IllegalArgumentException("Client state was unexpected in loadout parser.");
+        }
     }
 
     private static IInventory ParseInventory(Client client) {
         ItemContainer inventory = client.getItemContainer(InventoryID.INVENTORY);
-        if (inventory == null) {
-            // Bad client state.
-            throw new IllegalArgumentException("Client state was unexpected in loadout parser.");
-        }
         return new InventoryImpl(inventory);
     }
 
     private static IEquipment ParseEquipment(Client client) {
         ItemContainer equipment = client.getItemContainer(InventoryID.EQUIPMENT);
-        if (equipment == null) {
-            // Bad client state.
-            throw new IllegalArgumentException("Client state was unexpected in loadout parser.");
-        }
         return new EquipmentImpl(equipment);
     }
 

@@ -1,5 +1,6 @@
-package com.loadoutsaver;
+package com.loadoutsaver.ui;
 
+import com.loadoutsaver.LoadoutManager;
 import com.loadoutsaver.implementations.LoadoutImpl;
 import com.loadoutsaver.interfaces.IEquipment;
 import com.loadoutsaver.interfaces.IInventory;
@@ -8,7 +9,6 @@ import com.loadoutsaver.interfaces.ILoadout;
 import com.loadoutsaver.interfaces.ISubscriber;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
-import net.runelite.api.EquipmentInventorySlot;
 import net.runelite.api.GameState;
 import net.runelite.api.ItemComposition;
 import net.runelite.client.callback.ClientThread;
@@ -39,7 +39,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
@@ -190,7 +189,6 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
 
         // "Remove" button for removing a loadout.
         JButton removeButton = new JButton("Remove");
-        removeButton.setAlignmentX(CENTER_ALIGNMENT);
         removeButton.addActionListener(
                 ae -> {
                     if (Objects.equals(removeButton.getText(), "Click again to confirm delete")) {
@@ -201,31 +199,8 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
                     }
                 }
         );
+        removeButton.setAlignmentX(CENTER_ALIGNMENT);
         panel.add(removeButton);
-
-        // Share code label for displaying the share code.
-        JLabel shareCode = new JLabel("");
-        shareCode.setAlignmentX(CENTER_ALIGNMENT);
-        // Temporarily disabled due to text being truncated.
-        // panel.add(shareCode);
-
-        // Button to show/hide the share code.
-        JButton showShareCode = new JButton("Show share code");
-        showShareCode.addActionListener(
-                ae -> {
-                    if (shareCode.getText().isEmpty()) {
-                        shareCode.setText("Share code: " + loadout.SerializeString());
-                        showShareCode.setText("Hide share code");
-                    }
-                    else {
-                        shareCode.setText("");
-                        showShareCode.setText("Show share code");
-                    }
-                }
-        );
-        showShareCode.setAlignmentX(CENTER_ALIGNMENT);
-        // Temporarily disabled due to text being truncated.
-        // panel.add(showShareCode);
 
         JButton copyButton = new JButton("Copy share code to clipboard");
         copyButton.addActionListener(
@@ -247,7 +222,7 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
         return panel;
     }
 
-    private JPanel PanelWithBackground(String backgroundReference) {
+    JPanel PanelWithBackground(String backgroundReference) {
 
         BufferedImage image;
         synchronized (ImageIO.class) {
@@ -278,88 +253,8 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
         return result;
     }
 
-    private final EquipmentPanel headPanel = new EquipmentPanel("helmetdefault");
-    private final EquipmentPanel capePanel = new EquipmentPanel("capedefault");
-    private final EquipmentPanel amuletPanel = new EquipmentPanel("amuletdefault");
-    private final EquipmentPanel ammoPanel = new EquipmentPanel("ammodefault");
-    private final EquipmentPanel weaponPanel = new EquipmentPanel("weapondefault");
-    private final EquipmentPanel bodyPanel = new EquipmentPanel("bodydefault");
-    private final EquipmentPanel shieldPanel = new EquipmentPanel("shielddefault");
-    private final EquipmentPanel legsPanel = new EquipmentPanel("legsdefault");
-    private final EquipmentPanel glovesPanel = new EquipmentPanel("glovesdefault");
-    private final EquipmentPanel bootsPanel = new EquipmentPanel("bootsdefault");
-    private final EquipmentPanel ringPanel = new EquipmentPanel("ringdefault");
-
-    private JComponent[] GetEquipmentGrid() {
-        return new JComponent[] {
-                new JLabel(), headPanel, new JLabel(),
-                capePanel, amuletPanel, ammoPanel,
-                weaponPanel, bodyPanel, shieldPanel,
-                new JLabel(), legsPanel, new JLabel(),
-                glovesPanel, bootsPanel, ringPanel
-        };
-    }
-
     private JComponent AsComponent(IEquipment equipment) {
-        JPanel result = PanelWithBackground("equipmentbackgroundgrid.png");
-        // This is based on the properties of the equipment grid.
-        result.setBorder(new EmptyBorder(4, 23, 8, 23)); // 16 left looks good
-        result.setLayout(new GridLayout(5, 3));
-
-        Map<EquipmentInventorySlot, IItemStack> equipmentMap = equipment.GetEquipment();
-        for (EquipmentInventorySlot slot : equipmentMap.keySet()) {
-            IItemStack itemStack = equipmentMap.get(slot);
-            EquipmentPanel p;
-            switch (slot) {
-                case HEAD:
-                    p = headPanel;
-                    break;
-                case CAPE:
-                    p = capePanel;
-                    break;
-                case AMULET:
-                    p = amuletPanel;
-                    break;
-                case AMMO:
-                    p = ammoPanel;
-                    break;
-                case WEAPON:
-                    p = weaponPanel;
-                    break;
-                case BODY:
-                    p = bodyPanel;
-                    break;
-                case SHIELD:
-                    p = shieldPanel;
-                    break;
-                case LEGS:
-                    p = legsPanel;
-                    break;
-                case GLOVES:
-                    p = glovesPanel;
-                    break;
-                case BOOTS:
-                    p = bootsPanel;
-                    break;
-                case RING:
-                    p = ringPanel;
-                    break;
-                default:
-                    throw new IllegalArgumentException("Unknown equipment: " + slot);
-            }
-
-            JLabel label = p.GetNewLabel(false);
-
-            AddItemImageToLabel(label, itemStack);
-        }
-
-        for (Component c : GetEquipmentGrid()) {
-            result.add(c);
-        }
-
-        result.setAlignmentX(CENTER_ALIGNMENT);
-
-        return result;
+        return new TotalEquipmentPanel(this, equipment).GetPanel();
     }
 
     private JComponent AsComponent(IInventory inventory) {
@@ -367,18 +262,26 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
         JPanel result = PanelWithBackground("inventorybackground.png");
         int rows = (int) Math.ceil(((double) inventory.GetItems().length) / columns);
         result.setLayout(new GridLayout(rows, columns));
-        result.setBorder(new EmptyBorder(PADDING, PADDING * 2, PADDING, PADDING));
+        result.setBorder(new EmptyBorder(PADDING, PADDING, PADDING, PADDING));
+
+        // We remove padding to find out the remaining size.
+        int componentWidth = (result.getWidth() - 2 * PADDING) / columns;
+        int componentHeight = (result.getHeight() - 2 * PADDING) / rows;
 
         for (IItemStack itemStack : inventory.GetItems()) {
+            JComponent c;
 
             // For our inventory, location is important.
             if (itemStack.ItemID() < 0) {
                 // Empty slot.
-                result.add(new JLabel());
+                c = new JLabel();
             }
             else {
-                result.add(AsComponent(itemStack));
+                c = AsComponent(itemStack);
             }
+            c.setBorder(new EmptyBorder(3, 3, 3, 3));
+            c.setPreferredSize(new Dimension(componentWidth - 2 * 3, componentHeight - 2 * 3));
+            result.add(c);
         }
 
         return result;
@@ -387,10 +290,12 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
     private JComponent AsComponent(IItemStack itemStack) {
         JLabel label = new JLabel();
         AddItemImageToLabel(label, itemStack);
+        label.setAlignmentX(CENTER_ALIGNMENT);
+        label.setAlignmentY(CENTER_ALIGNMENT);
         return label;
     }
 
-    private void AddItemImageToLabel(JLabel label, IItemStack itemStack) {
+    void AddItemImageToLabel(JLabel label, IItemStack itemStack) {
         // We can't pull the item information without going to the client thread.
         // So we do this asynchronously, whenever available, and we add the final image later on.
         // Prevents the client from lagging - but quantities on stackable images might take some time to show up.

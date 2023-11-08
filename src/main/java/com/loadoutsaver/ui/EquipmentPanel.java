@@ -1,4 +1,4 @@
-package com.loadoutsaver;
+package com.loadoutsaver.ui;
 
 import javax.imageio.ImageIO;
 import javax.swing.JLabel;
@@ -32,17 +32,15 @@ public class EquipmentPanel extends JPanel {
             try {
                 image = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream(defaultBackground)));
             }
-            catch (IOException ignored) {
+            catch (IOException | NullPointerException ignored) {
+                System.out.println("Could not find equipment background: " + defaultBackground);
                 image = new BufferedImage(54, 54, BufferedImage.TYPE_INT_ARGB);
-            }
-            catch (NullPointerException npe) {
-                System.out.println("Null equipment background: " + defaultBackground);
-                throw npe;
             }
             try {
                 plainImage1 = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("emptyequipment.png")));
             }
-            catch (IOException ignored) {
+            catch (IOException | NullPointerException ignored) {
+                System.out.println("Could not find equipment background: " + defaultBackground);
                 plainImage1 = new BufferedImage(54, 54, BufferedImage.TYPE_INT_ARGB);
             }
         }

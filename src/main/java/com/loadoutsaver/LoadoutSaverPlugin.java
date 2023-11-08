@@ -1,14 +1,10 @@
 package com.loadoutsaver;
 
 import com.google.inject.Provides;
-import com.loadoutsaver.implementations.LoadoutImpl;
+import com.loadoutsaver.ui.LoadoutSaverPanel;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
-import net.runelite.api.GameState;
-import net.runelite.api.events.GameStateChanged;
 import net.runelite.client.config.ConfigManager;
-import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.menus.MenuManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
@@ -19,7 +15,6 @@ import javax.imageio.ImageIO;
 import javax.inject.Inject;
 import java.awt.image.BufferedImage;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 @Slf4j
 @PluginDescriptor(
@@ -60,8 +55,6 @@ public class LoadoutSaverPlugin extends Plugin
 			icon = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("icon.png")));
 		}
 		runeliteButton = NavigationButton.builder().tooltip("Loadout Manager").panel(loadoutSaverPanel).icon(icon).build();
-
-		menuManager.addPlayerMenuItem("Loadout Manager");
 		clientToolbar.addNavigation(this.runeliteButton);
 
 		// Load from save file.
