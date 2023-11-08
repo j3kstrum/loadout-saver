@@ -7,6 +7,7 @@ import net.runelite.api.Client;
 import net.runelite.api.InventoryID;
 import net.runelite.api.ItemContainer;
 
+import java.util.Arrays;
 import java.util.Base64;
 
 public class LoadoutImpl implements ILoadout {
@@ -102,9 +103,10 @@ public class LoadoutImpl implements ILoadout {
 
     @Override
     public ILoadout DeserializeString(String serialized) {
-        String[] components = serialized.strip().split(":");
+        String[] components = serialized.strip().split(":", -1);
         if (components.length != 3) {
             // Violation of format.
+            System.err.println("Corrupted loadout: wrong number of components: " + Arrays.toString(components));
             throw new IllegalArgumentException("Corrupted loadout: " + serialized);
         }
         String loadoutName = components[0];

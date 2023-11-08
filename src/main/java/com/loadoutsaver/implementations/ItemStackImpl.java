@@ -43,8 +43,9 @@ public class ItemStackImpl implements IItemStack {
 
     @Override
     public IItemStack DeserializeString(String serialized) {
-        String[] split = serialized.split(":");
+        String[] split = serialized.split(":", -1);
         if (split.length != 2) {
+            System.err.println("Corrupted item stack: " + serialized);
             throw new IllegalArgumentException("Corrupted item stack: " + serialized);
         }
         return new ItemStackImpl(Integer.parseInt(split[0]), Integer.parseInt(split[1]));
