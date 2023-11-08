@@ -1,5 +1,6 @@
-package com.loadoutsaver;
+package com.loadoutsaver.ui;
 
+import com.loadoutsaver.LoadoutManager;
 import com.loadoutsaver.implementations.LoadoutImpl;
 import com.loadoutsaver.interfaces.IEquipment;
 import com.loadoutsaver.interfaces.IInventory;
@@ -8,7 +9,6 @@ import com.loadoutsaver.interfaces.ILoadout;
 import com.loadoutsaver.interfaces.ISubscriber;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
-import net.runelite.api.EquipmentInventorySlot;
 import net.runelite.api.GameState;
 import net.runelite.api.ItemComposition;
 import net.runelite.client.callback.ClientThread;
@@ -39,7 +39,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
@@ -78,12 +77,14 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
 
     private void AlignAdd(JComponent c) {
         c.setAlignmentX(CENTER_ALIGNMENT);
+        c.setPreferredSize(new Dimension(INNER_WIDTH, c.getPreferredSize().height));
         this.add(c);
     }
 
     private JTextField loadoutName = null;
 
-    private static final int PADDING = 10;
+    private static final int PADDING = 5;
+    private static final int INNER_WIDTH = PANEL_WIDTH - (2 * PADDING);
 
     @Override
     public void Update(Stream<ILoadout> updatedObject) {
@@ -116,6 +117,7 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
                         }
                         catch (IllegalArgumentException iae) {
                             if (iae.getMessage().contains("Client state was unexpected")) {
+                                System.out.println(iae.getMessage());
                                 return;
                             }
                             if (iae.getMessage().contains("Name contained illegal characters")) {
@@ -187,7 +189,6 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
 
         // "Remove" button for removing a loadout.
         JButton removeButton = new JButton("Remove");
-        removeButton.setAlignmentX(CENTER_ALIGNMENT);
         removeButton.addActionListener(
                 ae -> {
                     if (Objects.equals(removeButton.getText(), "Click again to confirm delete")) {
@@ -198,31 +199,8 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
                     }
                 }
         );
+        removeButton.setAlignmentX(CENTER_ALIGNMENT);
         panel.add(removeButton);
-
-        // Share code label for displaying the share code.
-        JLabel shareCode = new JLabel("");
-        shareCode.setAlignmentX(CENTER_ALIGNMENT);
-        // Temporarily disabled due to text being truncated.
-        // panel.add(shareCode);
-
-        // Button to show/hide the share code.
-        JButton showShareCode = new JButton("Show share code");
-        showShareCode.addActionListener(
-                ae -> {
-                    if (shareCode.getText().isEmpty()) {
-                        shareCode.setText("Share code: " + loadout.SerializeString());
-                        showShareCode.setText("Hide share code");
-                    }
-                    else {
-                        shareCode.setText("");
-                        showShareCode.setText("Show share code");
-                    }
-                }
-        );
-        showShareCode.setAlignmentX(CENTER_ALIGNMENT);
-        // Temporarily disabled due to text being truncated.
-        // panel.add(showShareCode);
 
         JButton copyButton = new JButton("Copy share code to clipboard");
         copyButton.addActionListener(
@@ -244,7 +222,7 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
         return panel;
     }
 
-    private JPanel PanelWithBackground(String backgroundReference) {
+    JPanel PanelWithBackground(String backgroundReference) {
 
         BufferedImage image;
         synchronized (ImageIO.class) {
@@ -276,63 +254,7 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
     }
 
     private JComponent AsComponent(IEquipment equipment) {
-        JPanel result = PanelWithBackground("equipmentbackgroundgrid.png");
-        // This is based on the properties of the equipment grid.
-        result.setBorder(new EmptyBorder(0, 26, 0, 16));
-        result.setLayout(new GridLayout(5, 3));
-        Component[] components = new Component[15];
-        for (int i = 0; i < 15; i++) {
-            components[i] = new JLabel();
-        }
-
-        Map<EquipmentInventorySlot, IItemStack> equipmentMap = equipment.GetEquipment();
-        for (EquipmentInventorySlot slot : equipmentMap.keySet()) {
-            IItemStack itemStack = equipmentMap.get(slot);
-            Component c = AsComponent(itemStack);
-            switch (slot) {
-                case HEAD:
-                    components[1] = c;
-                    break;
-                case CAPE:
-                    components[3] = c;
-                    break;
-                case AMULET:
-                    components[4] = c;
-                    break;
-                case AMMO:
-                    components[5] = c;
-                    break;
-                case WEAPON:
-                    components[6] = c;
-                    break;
-                case BODY:
-                    components[7] = c;
-                    break;
-                case SHIELD:
-                    components[8] = c;
-                    break;
-                case LEGS:
-                    components[10] = c;
-                    break;
-                case GLOVES:
-                    components[12] = c;
-                    break;
-                case BOOTS:
-                    components[13] = c;
-                    break;
-                case RING:
-                    components[14] = c;
-                    break;
-            }
-        }
-
-        for (Component c : components) {
-            result.add(c);
-        }
-
-        result.setAlignmentX(CENTER_ALIGNMENT);
-
-        return result;
+        return new TotalEquipmentPanel(this, equipment).GetPanel();
     }
 
     private JComponent AsComponent(IInventory inventory) {
@@ -340,27 +262,40 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
         JPanel result = PanelWithBackground("inventorybackground.png");
         int rows = (int) Math.ceil(((double) inventory.GetItems().length) / columns);
         result.setLayout(new GridLayout(rows, columns));
-        result.setBorder(new EmptyBorder(PADDING, PADDING * 2, PADDING, PADDING));
+        result.setBorder(new EmptyBorder(PADDING, PADDING, PADDING, PADDING));
+
+        // We remove padding to find out the remaining size.
+        int componentWidth = (result.getWidth() - 2 * PADDING) / columns;
+        int componentHeight = (result.getHeight() - 2 * PADDING) / rows;
 
         for (IItemStack itemStack : inventory.GetItems()) {
+            JComponent c;
 
             // For our inventory, location is important.
             if (itemStack.ItemID() < 0) {
                 // Empty slot.
-                result.add(new JLabel());
+                c = new JLabel();
             }
             else {
-                result.add(AsComponent(itemStack));
+                c = AsComponent(itemStack);
             }
+            c.setBorder(new EmptyBorder(3, 3, 3, 3));
+            c.setPreferredSize(new Dimension(componentWidth - 2 * 3, componentHeight - 2 * 3));
+            result.add(c);
         }
 
         return result;
     }
 
     private JComponent AsComponent(IItemStack itemStack) {
-
         JLabel label = new JLabel();
+        AddItemImageToLabel(label, itemStack);
+        label.setAlignmentX(CENTER_ALIGNMENT);
+        label.setAlignmentY(CENTER_ALIGNMENT);
+        return label;
+    }
 
+    void AddItemImageToLabel(JLabel label, IItemStack itemStack) {
         // We can't pull the item information without going to the client thread.
         // So we do this asynchronously, whenever available, and we add the final image later on.
         // Prevents the client from lagging - but quantities on stackable images might take some time to show up.
@@ -377,12 +312,10 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
         image.addTo(label);
 
         // Finally, cross-verify later on when the client thread is available.
-        clientThread.invokeLater(() -> AddItemImageToLabel(label, itemStack));
-
-        return label;
+        clientThread.invokeLater(() -> AddItemImageToLabelClientThread(label, itemStack));
     }
 
-    private void AddItemImageToLabel(JLabel label, IItemStack item) {
+    private void AddItemImageToLabelClientThread(JLabel label, IItemStack item) {
         ItemComposition composition;
         FutureTask<ItemComposition> getComposition = new FutureTask<>(() -> client.getItemDefinition(item.ItemID()));
         clientThread.invoke(getComposition);

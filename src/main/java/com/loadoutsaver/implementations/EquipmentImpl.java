@@ -33,6 +33,10 @@ public class EquipmentImpl implements IEquipment {
     private static Map<EquipmentInventorySlot, IItemStack> ParseEquipment(ItemContainer equipment) {
         Map<EquipmentInventorySlot, IItemStack> mapping = new HashMap<>();
 
+        if (equipment == null) {
+            return mapping;
+        }
+
         int equipmentSize = equipment.size();
 
         for (int i = 0; i < equipmentSize; i++) {
