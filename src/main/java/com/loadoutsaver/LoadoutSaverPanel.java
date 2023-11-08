@@ -78,12 +78,14 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
 
     private void AlignAdd(JComponent c) {
         c.setAlignmentX(CENTER_ALIGNMENT);
+        c.setPreferredSize(new Dimension(INNER_WIDTH, c.getPreferredSize().height));
         this.add(c);
     }
 
     private JTextField loadoutName = null;
 
-    private static final int PADDING = 10;
+    private static final int PADDING = 5;
+    private static final int INNER_WIDTH = PANEL_WIDTH - (2 * PADDING);
 
     @Override
     public void Update(Stream<ILoadout> updatedObject) {
@@ -116,6 +118,7 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
                         }
                         catch (IllegalArgumentException iae) {
                             if (iae.getMessage().contains("Client state was unexpected")) {
+                                System.out.println(iae.getMessage());
                                 return;
                             }
                             if (iae.getMessage().contains("Name contained illegal characters")) {
@@ -275,58 +278,82 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
         return result;
     }
 
+    private final EquipmentPanel headPanel = new EquipmentPanel("helmetdefault");
+    private final EquipmentPanel capePanel = new EquipmentPanel("capedefault");
+    private final EquipmentPanel amuletPanel = new EquipmentPanel("amuletdefault");
+    private final EquipmentPanel ammoPanel = new EquipmentPanel("ammodefault");
+    private final EquipmentPanel weaponPanel = new EquipmentPanel("weapondefault");
+    private final EquipmentPanel bodyPanel = new EquipmentPanel("bodydefault");
+    private final EquipmentPanel shieldPanel = new EquipmentPanel("shielddefault");
+    private final EquipmentPanel legsPanel = new EquipmentPanel("legsdefault");
+    private final EquipmentPanel glovesPanel = new EquipmentPanel("glovesdefault");
+    private final EquipmentPanel bootsPanel = new EquipmentPanel("bootsdefault");
+    private final EquipmentPanel ringPanel = new EquipmentPanel("ringdefault");
+
+    private JComponent[] GetEquipmentGrid() {
+        return new JComponent[] {
+                new JLabel(), headPanel, new JLabel(),
+                capePanel, amuletPanel, ammoPanel,
+                weaponPanel, bodyPanel, shieldPanel,
+                new JLabel(), legsPanel, new JLabel(),
+                glovesPanel, bootsPanel, ringPanel
+        };
+    }
+
     private JComponent AsComponent(IEquipment equipment) {
         JPanel result = PanelWithBackground("equipmentbackgroundgrid.png");
         // This is based on the properties of the equipment grid.
-        result.setBorder(new EmptyBorder(0, 26, 0, 16));
+        result.setBorder(new EmptyBorder(4, 23, 8, 23)); // 16 left looks good
         result.setLayout(new GridLayout(5, 3));
-        Component[] components = new Component[15];
-        for (int i = 0; i < 15; i++) {
-            components[i] = new JLabel();
-        }
 
         Map<EquipmentInventorySlot, IItemStack> equipmentMap = equipment.GetEquipment();
         for (EquipmentInventorySlot slot : equipmentMap.keySet()) {
             IItemStack itemStack = equipmentMap.get(slot);
-            Component c = AsComponent(itemStack);
+            EquipmentPanel p;
             switch (slot) {
                 case HEAD:
-                    components[1] = c;
+                    p = headPanel;
                     break;
                 case CAPE:
-                    components[3] = c;
+                    p = capePanel;
                     break;
                 case AMULET:
-                    components[4] = c;
+                    p = amuletPanel;
                     break;
                 case AMMO:
-                    components[5] = c;
+                    p = ammoPanel;
                     break;
                 case WEAPON:
-                    components[6] = c;
+                    p = weaponPanel;
                     break;
                 case BODY:
-                    components[7] = c;
+                    p = bodyPanel;
                     break;
                 case SHIELD:
-                    components[8] = c;
+                    p = shieldPanel;
                     break;
                 case LEGS:
-                    components[10] = c;
+                    p = legsPanel;
                     break;
                 case GLOVES:
-                    components[12] = c;
+                    p = glovesPanel;
                     break;
                 case BOOTS:
-                    components[13] = c;
+                    p = bootsPanel;
                     break;
                 case RING:
-                    components[14] = c;
+                    p = ringPanel;
                     break;
+                default:
+                    throw new IllegalArgumentException("Unknown equipment: " + slot);
             }
+
+            JLabel label = p.GetNewLabel(false);
+
+            AddItemImageToLabel(label, itemStack);
         }
 
-        for (Component c : components) {
+        for (Component c : GetEquipmentGrid()) {
             result.add(c);
         }
 
@@ -358,9 +385,12 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
     }
 
     private JComponent AsComponent(IItemStack itemStack) {
-
         JLabel label = new JLabel();
+        AddItemImageToLabel(label, itemStack);
+        return label;
+    }
 
+    private void AddItemImageToLabel(JLabel label, IItemStack itemStack) {
         // We can't pull the item information without going to the client thread.
         // So we do this asynchronously, whenever available, and we add the final image later on.
         // Prevents the client from lagging - but quantities on stackable images might take some time to show up.
@@ -377,12 +407,10 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
         image.addTo(label);
 
         // Finally, cross-verify later on when the client thread is available.
-        clientThread.invokeLater(() -> AddItemImageToLabel(label, itemStack));
-
-        return label;
+        clientThread.invokeLater(() -> AddItemImageToLabelClientThread(label, itemStack));
     }
 
-    private void AddItemImageToLabel(JLabel label, IItemStack item) {
+    private void AddItemImageToLabelClientThread(JLabel label, IItemStack item) {
         ItemComposition composition;
         FutureTask<ItemComposition> getComposition = new FutureTask<>(() -> client.getItemDefinition(item.ItemID()));
         clientThread.invoke(getComposition);
