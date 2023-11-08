@@ -87,7 +87,7 @@ public class InventoryImpl implements IInventory {
 
     @Override
     public IInventory DeserializeString(String serialized) {
-        String[] encodedItems = serialized.split(":");
+        String[] encodedItems = serialized.split(":", -1);
         IItemStack[] items = Arrays.stream(encodedItems).map(
                 Base64.getDecoder()::decode
         ).map(

@@ -88,12 +88,13 @@ public class EquipmentImpl implements IEquipment {
     @Override
     public IEquipment DeserializeString(String serialized) {
 
-        List<String> items = Arrays.stream(serialized.split(";")).filter(s -> !s.isBlank()).collect(Collectors.toList());
+        List<String> items = Arrays.stream(serialized.split(";", -1)).filter(s -> !s.isBlank()).collect(Collectors.toList());
         Map<EquipmentInventorySlot, IItemStack> itemMap = new HashMap<>();
 
         for (String item : items) {
-            String[] kvp = item.split(":");
+            String[] kvp = item.split(":", -1);
             if (kvp.length != 2) {
+                System.err.println("Equipment was not a key-value pair: " + item);
                 throw new IllegalArgumentException("Corrupted equipment: " + serialized);
             }
             EquipmentInventorySlot key = ID_TO_SLOT.get(Integer.parseInt(kvp[0]));
