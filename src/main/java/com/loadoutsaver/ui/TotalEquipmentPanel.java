@@ -38,10 +38,16 @@ public class TotalEquipmentPanel extends JPanel {
 
     private final JPanel equipmentPanel;
 
+    /**
+     * The total equipment panel draws all of the active equipment items based on the actual RuneScape
+     * equipment interface (slightly modified for ease of use with the grid layout)
+     * @param panel The loadout saver panel, passing this is bad design but it works for now.
+     * @param equipment The equipment to render.
+     */
     public TotalEquipmentPanel(LoadoutSaverPanel panel, IEquipment equipment) {
         JPanel result = panel.PanelWithBackground("equipmentbackgroundgrid.png");
         // This is based on the properties of the equipment grid.
-        result.setBorder(new EmptyBorder(4, 23, 8, 23)); // 16 left looks good
+        result.setBorder(new EmptyBorder(4, 23, 8, 23));
         result.setLayout(new GridLayout(5, 3));
 
         Map<EquipmentInventorySlot, IItemStack> equipmentMap = equipment.GetEquipment();
@@ -86,6 +92,8 @@ public class TotalEquipmentPanel extends JPanel {
                     throw new IllegalArgumentException("Unknown equipment: " + slot);
             }
 
+            // Since we have an item to draw on here, we shouldn't put the default background for this panel
+            // and should instead use the plain gray background.
             JLabel label = p.GetNewLabel(false);
 
             panel.AddItemImageToLabel(label, itemStack);

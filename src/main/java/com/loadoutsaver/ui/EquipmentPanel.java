@@ -12,18 +12,29 @@ import java.util.Objects;
 
 public class EquipmentPanel extends JPanel {
 
+    // The current active image.
     private BufferedImage image;
+    // The default image for this particular tile, used when no item is in the equipment slot.
     private final BufferedImage defaultImage;
+    // The plain background image for this tile, which is drawn behind the item image when an equipment slot is filled.
     private final BufferedImage plainImage;
 
     private JLabel label = new JLabel();
 
+    /**
+     * Creates an equipment panel.
+     * This is one of the little gray squares on the runescape equipment interface
+     * representing a single equipment item.
+     * Each of these has a distinct default background which renders when there is no item to be displayed.
+     * @param defaultBackground The string representing the resource for the default background.
+     */
     public EquipmentPanel(String defaultBackground) {
         super();
         this.setLayout(new GridLayout(1, 1));
         BufferedImage plainImage1;
         this.setOpaque(false);
 
+        // Should just do this upstream, not safe to infer same filetype all the time.
         if (!defaultBackground.contains(".")) {
             defaultBackground = defaultBackground + ".png";
         }

@@ -30,6 +30,11 @@ public class EquipmentImpl implements IEquipment {
         this(ParseEquipment(equipment));
     }
 
+    /**
+     * Parses the user's equipment from the equipment item container.
+     * @param equipment Runelite's item container containing user equipment.
+     * @return A map from equipment slots to the item stacks in that slot.
+     */
     private static Map<EquipmentInventorySlot, IItemStack> ParseEquipment(ItemContainer equipment) {
         Map<EquipmentInventorySlot, IItemStack> mapping = new HashMap<>();
 
@@ -39,6 +44,7 @@ public class EquipmentImpl implements IEquipment {
 
         int equipmentSize = equipment.size();
 
+        // For each equipment object in the item container, build an item stack based on the item properties.
         for (int i = 0; i < equipmentSize; i++) {
             Item item = equipment.getItem(i);
             EquipmentInventorySlot slot = ID_TO_SLOT.get(i);
@@ -51,6 +57,9 @@ public class EquipmentImpl implements IEquipment {
         return mapping;
     }
 
+    /**
+     * Creates a map of Runelite's equipment inventory slot index to the enum value.
+     */
     private static final Map<Integer, EquipmentInventorySlot> ID_TO_SLOT = Arrays.stream(
             EquipmentInventorySlot.values()
     ).collect(
@@ -67,10 +76,12 @@ public class EquipmentImpl implements IEquipment {
         return equipment;
     }
 
-    // Serialization format: semicolon-delimited key-value pairs. keys are ints, values are b64-encoded item stacks.
-    // keys and values are separated by a colon.
-    // 1:{stack};2:{stack2}
-
+    /**
+     * Serialization format: semicolon-delimited key-value pairs. keys are ints, values are b64-encoded item stacks.
+     * keys and values are separated by a colon.
+     * 1:{stack};2:{stack2}
+     * @return The serialized string in the above format.
+     */
     @Override
     public String SerializeString() {
         if (this == Deserializer) {
@@ -85,6 +96,12 @@ public class EquipmentImpl implements IEquipment {
         ).collect(Collectors.joining(";"));
     }
 
+    /**
+     * Serialization format: semicolon-delimited key-value pairs. keys are ints, values are b64-encoded item stacks.
+     * keys and values are separated by a colon.
+     * 1:{stack};2:{stack2}
+     * @return The deserialized object of the string that was provided in the above format.
+     */
     @Override
     public IEquipment DeserializeString(String serialized) {
 

@@ -9,6 +9,7 @@ import net.runelite.api.ItemContainer;
 
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Objects;
 
 public class LoadoutImpl implements ILoadout {
 
@@ -24,6 +25,11 @@ public class LoadoutImpl implements ILoadout {
                 client.getItemContainer(InventoryID.INVENTORY) == null
                 && client.getItemContainer(InventoryID.EQUIPMENT) == null
         ) {
+            // I'm seeing that the inventory or equipment are null in a couple of cases:
+            //  1. When we're not actually in-game (this is expected)
+            //  2. When we're just starting to be in-game and haven't accessed the inventory or equipment (this is weird)
+            //  3. When the equipment or inventory are empty. This needs to be supported but because of the other cases,
+            //      we won't support saving completely empty loadouts (which should be fine...)
             throw new IllegalArgumentException("Client state was unexpected in loadout parser.");
         }
     }
@@ -39,21 +45,6 @@ public class LoadoutImpl implements ILoadout {
     }
 
     private LoadoutImpl(String name, IInventory inventory, IEquipment equipment) {
-        this(name, inventory, equipment, false);
-    }
-
-    private LoadoutImpl(String name, IInventory inventory, IEquipment equipment, boolean replaceName) {
-        if (name.contains(":")) {
-            // Some high-level sanitization. The ":" is the one that will break the (de)-serialization here.
-            if (replaceName) {
-                String replacement = name.replace(":", "[COLON]");
-                System.out.println("WARNING: Replacing name " + name + " with " + replacement);
-                name = replacement;
-            }
-            else {
-                throw new IllegalArgumentException("Name contained illegal characters: " + name);
-            }
-        }
         this.name = name;
         this.inventory = inventory;
         this.equipment = equipment;
@@ -87,9 +78,14 @@ public class LoadoutImpl implements ILoadout {
         return equipment;
     }
 
-    // Serialization format:
-    // {name}:{b64 inventory}:{b64 equipment}
 
+
+    /**
+     * Serialization format:
+     * {name};{b64 inventory}:{b64 equipment}:{version}
+     * This allows us to assume there are no semicolons after the name, so all name chars are supported.
+     * @return The serialized loadout following the above format.
+     */
     @Override
     public String SerializeString() {
         if (this == Deserializer) {
@@ -97,25 +93,43 @@ public class LoadoutImpl implements ILoadout {
         }
         String encodedInventory = Base64.getEncoder().encodeToString(inventory.SerializeString().getBytes());
         String encodedEquipment = Base64.getEncoder().encodeToString(equipment.SerializeString().getBytes());
+        String version = "1";
 
-        return this.name + ":" + encodedInventory + ":" + encodedEquipment;
+        return this.name + ";" + encodedInventory + ":" + encodedEquipment + ":" + version;
     }
 
     @Override
     public ILoadout DeserializeString(String serialized) {
-        String[] components = serialized.strip().split(":", -1);
+        String[] topComponents = serialized.strip().split(";", -1);
+        if (topComponents.length < 2) {
+            // Violation of format.
+            System.err.println("Corrupted loadout: wrong number of top components: " + Arrays.toString(topComponents));
+            throw new IllegalArgumentException("Corrupted loadout: " + serialized);
+        }
+
+        String loadoutName = String.join(
+                ";",
+                Arrays.copyOfRange(topComponents, 0, topComponents.length - 1)
+        );
+
+        String[] components = topComponents[topComponents.length - 1].split(":", -1);
         if (components.length != 3) {
             // Violation of format.
             System.err.println("Corrupted loadout: wrong number of components: " + Arrays.toString(components));
             throw new IllegalArgumentException("Corrupted loadout: " + serialized);
         }
-        String loadoutName = components[0];
-        String decodedInventory = new String(Base64.getDecoder().decode(components[1]));
-        String decodedEquipment = new String(Base64.getDecoder().decode(components[2]));
+        String decodedInventory = new String(Base64.getDecoder().decode(components[0]));
+        String decodedEquipment = new String(Base64.getDecoder().decode(components[1]));
+        String version = components[2];
+
+        if (!Objects.equals(version, "1")) {
+            System.err.println("Corrupted loadout: unknown version: " + version);
+            throw new IllegalArgumentException("Unknown loadout version: " + version);
+        }
 
         IInventory inventory = InventoryImpl.Deserializer.DeserializeString(decodedInventory);
         IEquipment equipment = EquipmentImpl.Deserializer.DeserializeString(decodedEquipment);
 
-        return new LoadoutImpl(loadoutName, inventory, equipment, true);
+        return new LoadoutImpl(loadoutName, inventory, equipment);
     }
 }

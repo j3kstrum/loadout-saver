@@ -9,6 +9,9 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.stream.Collectors;
 
+/**
+ * Represents the player's inventory in a loadout.
+ */
 public class InventoryImpl implements IInventory {
     public static IInventory Deserializer = new InventoryImpl();
 
@@ -28,7 +31,8 @@ public class InventoryImpl implements IInventory {
     }
 
     private static IItemStack[] ParseInventory(ItemContainer inventory) {
-        // I expected this to return 28, but it sometimes returns smaller values (27, or lower).
+        // I expected this to return 28, but it sometimes returns smaller values (27, or lower)
+        // when the last k slots of the inventory are empty.
         // Rendering fails if that's the case, and this should always be 28 in size anyways.
         int inventorySize = 28; // inventory.size();
         IItemStack[] parsed = new IItemStack[inventorySize];
@@ -40,7 +44,6 @@ public class InventoryImpl implements IInventory {
             return parsed;
         }
 
-        // From tests, row is ix // 4, col is ix % 4.
         for (int i = 0; i < inventorySize; i++) {
             Item item = inventory.getItem(i);
             if (item == null) {
@@ -62,13 +65,15 @@ public class InventoryImpl implements IInventory {
             throw new IllegalArgumentException("Attempted to access property on deserializer singleton.");
         }
         if (items.length != 28) {
-            System.out.println("inventory has " + items.length + "items");
+            System.err.println("Inventory had " + items.length + "items");
         }
         return items;
     }
 
-    // Serialization format: colon-delimited item stacks, b64 encoded.
-
+    /**
+     * Serialization format: colon-delimited item stacks, b64 encoded.
+     * @return The serialized string following the above format.
+     */
     @Override
     public String SerializeString() {
         if (this == Deserializer) {
@@ -85,6 +90,10 @@ public class InventoryImpl implements IInventory {
         );
     }
 
+    /**
+     * Serialization format: colon-delimited item stacks, b64 encoded.
+     * @return The inventory object deserialized from a string in the above format.
+     */
     @Override
     public IInventory DeserializeString(String serialized) {
         String[] encodedItems = serialized.split(":", -1);
