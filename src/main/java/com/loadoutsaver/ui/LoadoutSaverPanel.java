@@ -59,6 +59,10 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
     @Inject
     private ItemManager itemManager;
 
+    /**
+     * Sets the active loadout manager. In practice this is only called once when loading completes.
+     * @param manager The loadout manager to associate with this loadout panel.
+     */
     public void setManager(LoadoutManager manager) {
         if (this.manager != null) {
             this.manager.UnSubscribe(this);
@@ -67,6 +71,7 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
         this.manager.Subscribe(this);
     }
 
+    // Had some troubles with rendering and clearing components, so just created this array for tracking...
     private final List<Component> components = new ArrayList<>();
 
     @Override
@@ -89,6 +94,7 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
     @Override
     public void Update(Stream<ILoadout> updatedObject) {
 
+        this.getScrollPane().getVerticalScrollBar().setUnitIncrement(16);
         this.setBorder(new EmptyBorder(PADDING, PADDING, PADDING, PADDING));
         this.setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
 
@@ -110,6 +116,7 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
         JButton addButton = new JButton("Add current loadout");
         addButton.addActionListener(
                 ae -> {
+                    // Adds the player's current loadout to the loadout list, plus some error handling.
                     if (client.getGameState() == GameState.LOGGED_IN) {
                         try {
                             this.manager.AddLoadout(new LoadoutImpl(loadoutName.getText(), client));
@@ -121,7 +128,7 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
                                 return;
                             }
                             if (iae.getMessage().contains("Name contained illegal characters")) {
-                                addButton.setText("Add current loadout. [!] : not allowed");
+                                addButton.setText("Add current loadout. [!] name not allowed");
                                 return;
                             }
                             throw iae;
@@ -133,7 +140,7 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
                 });
         this.AlignAdd(addButton);
 
-        JButton saveButton = new JButton("Manually Save Loadouts");
+        JButton saveButton = new JButton("Manually save loadouts");
         saveButton.addActionListener(
                 al -> {
                     manager.save();
@@ -145,6 +152,8 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
         );
         this.AlignAdd(saveButton);
 
+        // Allow for loading loadouts based on a share code.
+        // This is just the serialized loadout string (see LoadoutImpl::SerializeString).
         JTextField loadExternalField = new JTextField("Paste share code here to load");
         this.AlignAdd(loadExternalField);
 
@@ -163,14 +172,21 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
         );
         this.AlignAdd(loadButton);
 
+        // Lastly, add all of the rendered loadouts underneath.
         updatedObject.map(this::AsComponent).forEach(this::AlignAdd);
 
         this.revalidate();
         this.repaint();
     }
 
+    /**
+     * Renders a loadout as a JComponent.
+     * @param loadout The loadout to be rendered.
+     * @return The JComponent rendering of the loadout.
+     */
     private JComponent AsComponent(ILoadout loadout) {
         JPanel panel = new JPanel();
+        // Pad top and bottom to have some space between other components; arrange everything in one column.
         panel.setBorder(new EmptyBorder(PADDING, 0, PADDING, 0));
         panel.setLayout(new BoxLayout(panel, BoxLayout.PAGE_AXIS));
 
@@ -202,6 +218,7 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
         removeButton.setAlignmentX(CENTER_ALIGNMENT);
         panel.add(removeButton);
 
+        // Copy button to place the share code (serialized string) for the given loadout on the player's clipboard.
         JButton copyButton = new JButton("Copy share code to clipboard");
         copyButton.addActionListener(
             ae -> {
@@ -222,6 +239,11 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
         return panel;
     }
 
+    /**
+     * Creates a JPanel that has the provided background image.
+     * @param backgroundReference The string reference to the background image resource.
+     * @return A JPanel with the loaded image as its background.
+     */
     JPanel PanelWithBackground(String backgroundReference) {
 
         BufferedImage image;
@@ -253,10 +275,20 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
         return result;
     }
 
+    /**
+     * Equipment was hard to render, so it gets its own class for the component.
+     * @param equipment The equipment set to be drawn as a component.
+     * @return A JComponent that draws the given equipment in a nice way on the screen.
+     */
     private JComponent AsComponent(IEquipment equipment) {
         return new TotalEquipmentPanel(this, equipment).GetPanel();
     }
 
+    /**
+     * Renders the player's inventory into a nice grid on the screen.
+     * @param inventory The player's inventory to draw on the screen.
+     * @return A JComponent that renders the given inventory in a nice way on the screen.
+     */
     private JComponent AsComponent(IInventory inventory) {
         int columns = 4;
         JPanel result = PanelWithBackground("inventorybackground.png");
@@ -300,6 +332,7 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
         // So we do this asynchronously, whenever available, and we add the final image later on.
         // Prevents the client from lagging - but quantities on stackable images might take some time to show up.
         AsyncBufferedImage image;
+        // We can make a quick inference and then correct ourselves later.
         if (itemStack.Quantity() > 1) {
             // We trust our data (which claims it is naturally stackable), and then verify later.
             image = itemManager.getImage(itemStack.ItemID(), itemStack.Quantity(), true);
@@ -315,6 +348,13 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
         clientThread.invokeLater(() -> AddItemImageToLabelClientThread(label, itemStack));
     }
 
+    /**
+     * This function must run on the client thread. It reads from the item definition for the item
+     * in order to determine if the item is actually stackable or not.
+     * This allows us to correct our initially rendered image, which is our best guess.
+     * @param label The label onto which to draw the final image as an icon.
+     * @param item The item stack for which we would like to obtain the image to draw.
+     */
     private void AddItemImageToLabelClientThread(JLabel label, IItemStack item) {
         ItemComposition composition;
         FutureTask<ItemComposition> getComposition = new FutureTask<>(() -> client.getItemDefinition(item.ItemID()));
@@ -324,6 +364,7 @@ public class LoadoutSaverPanel extends PluginPanel implements ISubscriber<Stream
         }
         catch (ExecutionException | InterruptedException e) {
             // Couldn't get the composition.
+            // Just take our initial image; return.
             return;
         }
         AsyncBufferedImage image = itemManager.getImage(item.ItemID(), item.Quantity(), composition.isStackable());

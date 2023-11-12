@@ -8,6 +8,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Stream;
 
+import com.loadoutsaver.LoadoutSaverPlugin;
+
+/**
+ * The loadout manager is responsible for coordinating access and updates to and from the user's set of loadouts.
+ */
 public class LoadoutManager {
     private final List<ILoadout> loadouts;
 
@@ -20,11 +25,19 @@ public class LoadoutManager {
         this(DataIO.Parse(config.loadouts()), config, configManager);
     }
 
+    /**
+     * Saves the active loadout collection to the runelite configuration file.
+     * @param configManager The configuration manager, used to write to the configuration file.
+     */
     public void save(ConfigManager configManager) {
         System.out.println("Serializing...");
         String serialized = DataIO.FullSerialize(loadouts);
         System.out.println("Saving...");
-        configManager.setConfiguration(LoadoutSaverPlugin.CONFIG_GROUP_NAME, "savedloadouts", serialized);
+        configManager.setConfiguration(
+                LoadoutSaverPlugin.CONFIG_GROUP_NAME,
+                LoadoutSaverPlugin.CONFIG_SAVED_LOADOUT_KEY,
+                serialized
+        );
         System.out.println("Save complete.");
     }
 

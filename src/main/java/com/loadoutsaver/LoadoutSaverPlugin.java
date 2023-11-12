@@ -50,6 +50,7 @@ public class LoadoutSaverPlugin extends Plugin
 	@Override
 	protected void startUp() throws Exception
 	{
+		// Create the button on the right side of the Runelite interface that loads the loadout saver panel.
 		BufferedImage icon;
 		synchronized (ImageIO.class) {
 			icon = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("icon.png")));
@@ -73,6 +74,7 @@ public class LoadoutSaverPlugin extends Plugin
 		loadoutManager.save(configManager);
 		System.out.println("Successfully saved to configuration.");
 
+		// Unassociate the plugin button from the runelite interface.
 		clientToolbar.removeNavigation(this.runeliteButton);
 		menuManager.removePlayerMenuItem("Loadout Manager");
 	}

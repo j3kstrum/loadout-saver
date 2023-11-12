@@ -2,6 +2,10 @@ package com.loadoutsaver.implementations;
 
 import com.loadoutsaver.interfaces.IItemStack;
 
+/**
+ * Represents a stack of items for the user
+ * (or a single item).
+ */
 public class ItemStackImpl implements IItemStack {
     public static IItemStack Deserializer = new ItemStackImpl();
 
